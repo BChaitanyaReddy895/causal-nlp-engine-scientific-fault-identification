@@ -1,0 +1,8 @@
+@import './index.css';
+
+/* App-level overrides (keeps Tailwind + app styles) */
+.app-root {
+  min-height: 100vh;
+}
+
+/* You can add project-specific styles here */

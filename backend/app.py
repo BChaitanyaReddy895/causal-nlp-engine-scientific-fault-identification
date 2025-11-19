@@ -108,8 +108,10 @@ def register_error_handlers(app):
 def register_blueprints(app):
     """Register Flask blueprints."""
     from backend.api.health_routes import health_bp
+    from backend.api.verify_routes import verify_bp
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(verify_bp)
 
 
 def register_cli_commands(app):
