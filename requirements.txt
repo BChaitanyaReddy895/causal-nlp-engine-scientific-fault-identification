@@ -79,3 +79,24 @@ sentence-transformers==2.2.2
 matplotlib==3.8.2
 seaborn==0.13.0
 plotly==5.18.0
+
+# Multimodal Learning
+torchvision==0.16.2
+Pillow==10.1.0
+opencv-python==4.8.1.78
+
+# Meta-Learning & Few-Shot
+higher==0.2.1
+
+# Reinforcement Learning
+gym==0.26.2
+stable-baselines3==2.2.1
+
+# Advanced Training
+accelerate==0.25.0
+deepspeed==0.12.6
+wandb==0.16.1
+
+# Optimization
+torch-optimizer==0.3.0
+adabelief-pytorch==0.2.1
