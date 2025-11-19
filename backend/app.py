@@ -109,9 +109,11 @@ def register_blueprints(app):
     """Register Flask blueprints."""
     from backend.api.health_routes import health_bp
     from backend.api.verify_routes import verify_bp
+    from backend.api.enhanced_routes import enhanced_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(verify_bp)
+    app.register_blueprint(enhanced_bp)  # Advanced API with enhanced features
 
 
 def register_cli_commands(app):

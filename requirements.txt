@@ -4,6 +4,7 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
 python-dotenv==1.0.0
+Werkzeug==3.0.1
 
 # Machine Learning & NLP
 torch==2.1.2
@@ -11,21 +12,26 @@ transformers==4.36.2
 scikit-learn==1.3.2
 numpy==1.24.3
 scipy==1.11.4
+sentencepiece==0.1.99
 
 # Graph Neural Networks
 dgl==1.1.3
 torch-geometric==2.4.0
+torch-scatter==2.1.2
+torch-sparse==0.6.18
 
-# Bioinformatics
+# Bioinformatics & Biomedical NLP
 biopython==1.83
 
 # NLP & Parsing
 spacy==3.7.2
 nltk==3.8.1
+tokenizers==0.15.0
 
 # Knowledge Graph
 networkx==3.2
 rdflib==7.0.0
+neo4j==5.14.1
 
 # Database & ORM
 SQLAlchemy==2.0.23
@@ -52,6 +58,24 @@ mypy==1.7.1
 pandas==2.1.3
 jsonschema==4.20.0
 
+# Explainability
+lime==0.2.0.1
+shap==0.44.0
+
+# Causal Inference
+dowhy==0.11
+econml==0.15.0
+causalml==0.15.0
+
 # Utilities
 requests==2.31.0
 tqdm==4.66.1
+python-dateutil==2.8.2
+pyyaml==6.0.1
+
+# Advanced features
+faiss-cpu==1.7.4
+sentence-transformers==2.2.2
+matplotlib==3.8.2
+seaborn==0.13.0
+plotly==5.18.0
