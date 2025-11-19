@@ -1,6 +1,5 @@
 """Tests for API routes."""
 
-import pytest
 import json
 
 

@@ -65,21 +65,27 @@ def services_status():
 @log_request
 def check_dependencies():
     """Check required dependencies."""
-    try:
-        import spacy
-        import torch
-        import transformers
-        import networkx
-        import pandas
-        return jsonify({
-            "spacy": {"available": True, "version": spacy.__version__},
-            "torch": {"available": True, "version": torch.__version__},
-            "transformers": {"available": True, "version": transformers.__version__},
-            "networkx": {"available": True},
-            "pandas": {"available": True, "version": pandas.__version__}
-        }), 200
-    except ImportError as e:
-        return jsonify({"error": str(e)}), 500
+    import importlib
+    import importlib.util
+
+    packages = ['spacy', 'torch', 'transformers', 'networkx', 'pandas']
+    results = {}
+
+    for pkg in packages:
+        spec = importlib.util.find_spec(pkg)
+        if spec is None:
+            results[pkg] = {"available": False}
+            continue
+
+        try:
+            mod = importlib.import_module(pkg)
+            version = getattr(mod, "__version__", None) or getattr(mod, "VERSION", None)
+            results[pkg] = {"available": True, "version": version}
+        except Exception as e:
+            logger.warning(f"Failed to import {pkg}: {e}")
+            results[pkg] = {"available": False, "error": str(e)}
+
+    return jsonify(results), 200
 
 
 # Swagger/OpenAPI docs
