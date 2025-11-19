@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: causal-nlp-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=backend/app.py
+      - LOG_LEVEL=DEBUG
+      - DATABASE_URL=sqlite:///causal_nlp.db
+      - KG_TYPE=sqlite
+      - KG_PATH=data/kg.db
+    volumes:
+      - ./backend:/app/backend
+      - ./data:/app/data
+      - ./models:/app/models
+    networks:
+      - causal-nlp-network
+    depends_on:
+      - kg_db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: causal-nlp-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    networks:
+      - causal-nlp-network
+
+  kg_db:
+    image: sqlite:latest
+    container_name: causal-nlp-kg-db
+    volumes:
+      - kg_data:/data
+    networks:
+      - causal-nlp-network
+
+  # Optional: Add Neo4j for more advanced KG features
+  # neo4j:
+  #   image: neo4j:latest
+  #   container_name: causal-nlp-neo4j
+  #   environment:
+  #     - NEO4J_AUTH=neo4j/password
+  #   ports:
+  #     - "7687:7687"
+  #     - "7474:7474"
+  #   volumes:
+  #     - neo4j_data:/data
+  #   networks:
+  #     - causal-nlp-network
+
+volumes:
+  kg_data:
+
+networks:
+  causal-nlp-network:
+    driver: bridge
