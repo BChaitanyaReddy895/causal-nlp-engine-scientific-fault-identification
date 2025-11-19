@@ -19,17 +19,29 @@ class DAGLearner(nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
-        """Learn DAG structure."""
+    def forward(self, embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Learn DAG structure.
+        
+        Args:
+            embeddings: Tensor of shape [N, hidden_dim] or [B, N, hidden_dim]
+            
+        Returns:
+            Tuple of (adjacency, loss_acyclic)
+        """
+        # Handle batch dimension if present
+        if embeddings.dim() == 3:
+            embeddings = embeddings.squeeze(0)  # [B, N, C] -> [N, C]
+            
         # Self-attention
-        attn_out, _ = self.attention(embeddings, embeddings, embeddings)
+        attn_out, _ = self.attention(embeddings.unsqueeze(0), embeddings.unsqueeze(0), embeddings.unsqueeze(0))
+        attn_out = attn_out.squeeze(0)
         attn_out = self.dropout(attn_out)
 
         # Score edges
         edge_logits = self.fc2(self.relu(self.fc1(attn_out)))
         adjacency = torch.sigmoid(edge_logits).squeeze(-1)
 
-        # Enforce acyclicity
+        # Enforce acyclicity constraint
         A = adjacency
         h = torch.trace(torch.matrix_power(torch.eye(self.num_nodes, device=A.device) + A / self.num_nodes, self.num_nodes))
         loss_acyclic = h + 1  # Should be close to 1 for DAG
@@ -73,31 +85,36 @@ class GATLayer(nn.Module):
         assert output_dim % num_heads == 0, "output_dim must be divisible by num_heads"
 
         self.linear = nn.Linear(input_dim, output_dim)
-        self.attention = nn.Linear(2 * self.head_dim, 1)
+        self.attention_linear = nn.Linear(output_dim, 1)  # Changed: take output_dim, not 2*head_dim
         self.dropout = nn.Dropout(dropout)
         self.leaky_relu = nn.LeakyReLU(0.2)
 
     def forward(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
         B, N, C = x.shape
-        x_proj = self.linear(x)
+        x_proj = self.linear(x)  # [B, N, output_dim]
 
-        # Compute attention scores
-        x_i = x_proj.unsqueeze(2).expand(-1, -1, N, -1)  # [B, N, N, output_dim]
-        x_j = x_proj.unsqueeze(1).expand(-1, N, -1, -1)  # [B, N, N, output_dim]
-
-        x_combined = torch.cat([x_i, x_j], dim=-1)  # [B, N, N, 2*output_dim]
-        scores = self.attention(x_combined).squeeze(-1)  # [B, N, N]
+        # Simplified attention: compute score for each node
+        scores = self.attention_linear(x_proj)  # [B, N, 1]
+        scores = scores.squeeze(-1)  # [B, N]
         scores = self.leaky_relu(scores)
 
+        # Expand to [B, N, N] for matrix multiplication
+        scores = scores.unsqueeze(1).expand(-1, N, -1)  # [B, N, N]
+        
         # Mask and normalize
-        mask = (adj > 0).unsqueeze(0).unsqueeze(0)
-        scores = torch.where(mask, scores, torch.tensor(float('-inf')))
+        if adj.dim() == 2:
+            mask = (adj > 0).unsqueeze(0)  # [1, N, N]
+        else:
+            mask = (adj > 0)
+        
+        mask = mask.expand_as(scores)
+        scores = torch.where(mask, scores, torch.tensor(float('-inf'), device=scores.device))
         attention_weights = torch.softmax(scores, dim=-1)
         attention_weights = self.dropout(attention_weights)
 
         # Apply attention
-        output = torch.matmul(attention_weights, x_proj)
+        output = torch.matmul(attention_weights, x_proj)  # [B, N, output_dim]
 
         return output
 
@@ -117,8 +134,16 @@ class CausalGraphModel(nn.Module):
         )
 
     def forward(self, embeddings: torch.Tensor, edge_features: torch.Tensor) -> Dict:
-        """Forward pass."""
-        # Learn DAG structure
+        """Forward pass.
+        
+        Args:
+            embeddings: Node embeddings [B, N, C] or [N, C]
+            edge_features: Edge features [B, N, N] or [N, N]
+            
+        Returns:
+            Dictionary with adjacency, node_embeddings, consistency_scores, acyclic_loss
+        """
+        # Learn DAG structure (DAGLearner handles batch dimension internally)
         adjacency, acyclic_loss = self.dag_learner(embeddings)
 
         # Get node representations
@@ -126,12 +151,20 @@ class CausalGraphModel(nn.Module):
 
         # Score consistency for each edge
         consistency_scores = []
-        for i in range(embeddings.shape[1]):
-            for j in range(embeddings.shape[1]):
-                if adjacency[i, j] > 0.5:
-                    edge_feat = torch.cat([node_reprs[:, i], node_reprs[:, j]], dim=-1)
-                    score = self.consistency_scorer(edge_feat)
-                    consistency_scores.append(score)
+        
+        # Handle both 2D [N, N] and 3D [B, N, N] adjacency
+        if adjacency.dim() == 2:
+            num_nodes = adjacency.shape[0]
+            for i in range(num_nodes):
+                for j in range(num_nodes):
+                    if adjacency[i, j] > 0.5:
+                        # Handle node_reprs dimensions
+                        if node_reprs.dim() == 3:
+                            edge_feat = torch.cat([node_reprs[0, i], node_reprs[0, j]], dim=-1)
+                        else:
+                            edge_feat = torch.cat([node_reprs[i], node_reprs[j]], dim=-1)
+                        score = self.consistency_scorer(edge_feat)
+                        consistency_scores.append(score)
 
         return {
             "adjacency": adjacency,

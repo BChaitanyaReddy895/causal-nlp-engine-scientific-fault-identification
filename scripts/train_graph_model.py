@@ -30,10 +30,10 @@ class TrainingPipeline:
             output = self.model(embeddings, edge_features)
 
             # Compute loss
-            acyclic_loss = output['acyclic_loss'].mean()
+            acyclic_loss = output['acyclic_loss'].mean() if isinstance(output['acyclic_loss'], torch.Tensor) else torch.tensor(output['acyclic_loss'], device=device)
             consistency_loss = torch.tensor(0.0, device=device)
 
-            if output['consistency_scores']:
+            if output['consistency_scores'] and len(output['consistency_scores']) > 0:
                 consistency_scores = torch.stack(output['consistency_scores']).mean()
                 consistency_loss = torch.abs(1.0 - consistency_scores)
 
@@ -78,6 +78,8 @@ def create_dummy_dataloader(num_samples: int = 32, num_nodes: int = 10):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, '.')
     from backend.graph_models.gnn import CausalGraphModel
 
     print("Initializing training pipeline...")
@@ -91,4 +93,4 @@ if __name__ == "__main__":
     pipeline.train(data)
 
     # Save
-    pipeline.save_checkpoint("models/causal_graph_model.pt")
+    pipeline.save_checkpoint("models/graph_model/causal_graph_model.pt")

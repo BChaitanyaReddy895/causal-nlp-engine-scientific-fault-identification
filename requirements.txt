@@ -29,7 +29,6 @@ rdflib==7.0.0
 
 # Database & ORM
 SQLAlchemy==2.0.23
-sqlite3-python==1.0.0
 
 # API Documentation
 flasgger==0.9.7.1
