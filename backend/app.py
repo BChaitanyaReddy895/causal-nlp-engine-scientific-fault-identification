@@ -5,10 +5,15 @@ Initializes and configures the Flask app with blueprints and extensions.
 
 import logging
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.config import get_config
 
